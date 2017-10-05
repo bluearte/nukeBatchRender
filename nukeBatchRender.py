@@ -18,8 +18,12 @@ class RenderThread(QThread):
                 fullpath = os.path.join(self.location, each.text())
                 os.system("C:\\PrivateFolder\\_launcher\\Nuke10.0v1_backgroundRender.bat {}".format(fullpath))
                 each.setForeground(Qt.gray)
-            except:
+            except Exception as e:
+                print(e)
+            else:
                 each.setForeground(Qt.red)
+            finally:
+                print("Done!!!")
 
 
 class Nuke(QWidget):

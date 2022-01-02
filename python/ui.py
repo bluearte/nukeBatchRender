@@ -1,11 +1,12 @@
-from PySide.QtCore import *
-from PySide.QtGui import *
+from Qt import QtWidgets
+from Qt import QtGui
+from Qt import QtCore
 import time
 import sys
 import os
 
 
-class RenderThread(QThread):
+class RenderThread(QtCore.QThread):
     def __init__(self, location, selected):
         super(RenderThread, self).__init__()
         self.location = location
@@ -14,85 +15,80 @@ class RenderThread(QThread):
     def run(self):
         for each in self.selected:
             try:
-                each.setForeground(Qt.green)
+                each.setForeground(QtCore.Qt.green)
                 fullpath = os.path.join(self.location, each.text())
                 os.system("C:\\PrivateFolder\\_launcher\\Nuke10.0v1_backgroundRender.bat {}".format(fullpath))
-                each.setForeground(Qt.gray)
+                each.setForeground(QtCore.Qt.gray)
             except Exception as e:
                 print(e)
             else:
-                each.setForeground(Qt.red)
+                each.setForeground(QtCore.Qt.red)
             finally:
                 print("Done!!!")
 
+class NukescriptListWidget(QtWidgets.QListWidget):
+    def __init__(self, nukescripts=None, parent=None):
+        super(NukescriptListWidget, self).__init__(parent)
+        self.setAlternatingRowColors(True)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
-class Nuke(QWidget):
-    def __init__(self):
-        super(Nuke, self).__init__()
-        self.setWindowTitle("Nuke Render Manager")
-        self.setupUI()
+class NukeWidget(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super(NukeWidget, self).__init__(parent)
+        epi_label = QtWidgets.QLabel()
+        self._epi_combo = QtWidgets.QComboBox()
+        self._epi_combo.addItems([])
+        sequence_label = QtWidgets.QLabel()
+        self._sequence_combo = QtWidgets.QComboBox()
+        self._sequence_combo.addItems([])
+        shot_label = QtWidgets.QLabel()
+        self._shot_combo = QtWidgets.QComboBox()
+        self._shot_combo.addItems([])
 
-    def setupUI(self):
-        self.comboBox = QComboBox()
-        comboBoxItems = self.getEpisode()
-        self.comboBox.addItems(comboBoxItems)
-        self.listWidget = QListWidget()
-        listWidgetItems = self.getNukescripts()
-        self.listWidget.setAlternatingRowColors(True)
-        self.listWidget.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        epi_combo_layout = QtWidgets.QVBoxLayout()
+        epi_combo_layout.addWidget(self.epi_label)
+        epi_combo_layout.addWidget(self.epi_combo)
 
-        self.btn2 = QPushButton()
-        self.btn2.setText("Render Selected")
+        seq_combo_layout = QtWidgets.QVBoxLayout()
+        seq_combo_layout.addWidget(self.sequence_label)
+        seq_combo_layout.addWidget(self.sequence_combo)
 
-        self.vLayout = QVBoxLayout()
-        self.vLayout.addWidget(self.comboBox)
-        self.vLayout.addWidget(self.listWidget)
-        self.vLayout.addWidget(self.btn2)
+        shot_combo_layout = QtWidgets.QVBoxLayout()
+        shot_combo_layout.addWidget(self.shot_label)
+        shot_combo_layout.addWidget(self.shot_combo)
 
-        self.setLayout(self.vLayout)
+        combo_layout = QtWidgets.QHBoxLayout()
+        combo_layout.addLayout(epi_combo_layout)
+        combo_layout.addLayout(seq_combo_layout)
+        combo_layout.addLayout(shot_combo_layout)
 
-        self.comboBox.currentIndexChanged.connect(self.getNukescripts)
-        self.btn2.clicked.connect(self.renderSelected)
+        self._nk_list = NukescriptListWidget()
 
-    def getNukescripts(self):
-        location = "C:\\PrivateFolder\\_projects\\nuke\\" + self.comboBox.currentText()
-        listFile = []
-        for eachFile in os.listdir(location):
-            if os.path.isfile(os.path.join(location, eachFile)):
-                if not eachFile.endswith(".nk~"):
-                    listFile.append(eachFile)
-        try:
-            self.listWidget.clear()
-        except Exception as e:
-            print(e)
-        finally:
-            self.listWidget.addItems(listFile)
+        self._render_button = QtWidgets.QPushButton()
+        self._render_button.setText("Render")
+        self._render_button.setEnabled(False)
 
-    def getEpisode(self):
-        location = "C:\\PrivateFolder\\_projects\\nuke\\"
-        listDir = []
-        for eachDir in os.listdir(location):
-            if os.path.isdir(os.path.join(location, eachDir)):
-                listDir.append(eachDir)
-        return listDir
+        main_layout = QtWidgets.QVBoxLayout()
+        main_layout.addLayout(combo_layout)
+        main_layout.addWidget(self.nk_list)
+        main_layout.addWidget(self.render_button)
 
-    def markSelected(self):
-        for each in self.listWidget.selectedItems():
-            each.setForeground(Qt.blue)
+        self._epi_combo.currentIndexChanged[str].connect(self._change_shot)
+        self._sequence_combo.currentIndexChanged[str].connect(self._change_shot)
+        self._shot_combo.currentIndexChanged[str].connect(self._change_shot)
+        self._render_button.clicked.connect(self._render_selected)
+    
+    def _change_shot(self):
+        pass
 
-    def renderSelected(self):
-        self.markSelected()
-        location = "C:\\PrivateFolder\\_projects\\nuke\\" + self.comboBox.currentText()
-        self.renderThread = RenderThread(location, self.listWidget.selectedItems())
+    def _render_selected(self):
+        location = ""
+        self.renderThread = RenderThread(location, self.nk_list.selectedItems())
         self.renderThread.start()
 
 
 def main():
-    app = QApplication(sys.argv)
-    nuke = Nuke()
+    app = QtWidgets.QApplication(sys.argv)
+    nuke = NukeWidget()
     nuke.show()
     sys.exit(app.exec_())
-
-
-if __name__ == '__main__':
-    main()
